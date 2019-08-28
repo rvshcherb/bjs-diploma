@@ -1,9 +1,19 @@
-function showStocks() {
+function getStocks(wallet, callback) {
+  console.log(wallet);
+  let fromCurrency;
+  let targetAmount;
+  for (let cur in wallet) {
+    if (wallet[cur] > 0) {
+      fromCurrency = cur;
+      currencyAmount = wallet[cur];
+    }
+  }
   return ApiConnector.getStocks((err, data) => {
     if (err) {
       console.log(err);
     } else {
-      console.log(data);
+      // вот сюда можно вставить алгоритм расчета оптимального курса
+      callback(fromCurrency, 'NETCOIN', data[99][`${fromCurrency}_NETCOIN`] * currencyAmount);
     }
   });
 }
@@ -57,28 +67,44 @@ class Profile {
       if (err) {
         console.log(err);
       } else {
-        console.log(data);
+        //console.log(data);
         console.log(`Added ${amount} of ${currency} to ${this.name.firstName}`);
-        callback();
+        callback(data.wallet);
       }
     });
   }
 
-  convertMoney(fromCurrency, targetCurrency, targetAmont) {
+  convertMoney(fromCurrency, targetCurrency, targetAmount, callback) {
+    console.log(`Converting ${fromCurrency} to ${targetAmount} of ${targetCurrency}`);
     return ApiConnector.convertMoney({
       fromCurrency: fromCurrency,
       targetCurrency: targetCurrency,
-      targetAmont: targetAmont
+      targetAmount: targetAmount
     }, (err, data) => {
       if (err) {
         console.log(err);
       } else {
         console.log(data);
+        callback();
+      }
+    });
+  }
+
+  transferMoney(to, amount) {
+    console.log(`Transfering ${amount} NETCOINS to ${to}`);
+    return ApiConnector.transferMoney({
+      to: to,
+      amount: amount,
+    }, (err, data) => {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(`${to} has got ${amount}  NETCOINS`);
+        console.log(data);
       }
     });
   }
 }
-
 
 
 function main() {
@@ -100,8 +126,8 @@ function main() {
     password: 'petrpass',
   });
 
- Ivan.createUser(() => Ivan.authorize(() => Ivan.addMoney('EUR', 100000, () => Ivan.convertMoney('EUR', 'NETCOIN', 1))));
+
+  Ivan.createUser(() => Ivan.authorize(() => Ivan.addMoney('USD', 100000, (data) => getStocks(data, (fromCurrency, targetCurrency, targetAmount) => Ivan.convertMoney(fromCurrency, 'NETCOIN', targetAmount, () => Petr.createUser(() => Ivan.transferMoney('petya', targetAmount)))))));
 }
 
-showStocks();
 main();
